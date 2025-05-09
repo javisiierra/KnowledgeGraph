@@ -1,0 +1,12 @@
+pdfminer.six
+bertopic
+sentence-transformers
+torch
+rdflib
+numpy
+scikit-learn
+spacy
+requests
+rdflib
+pandas
+streamlit 
