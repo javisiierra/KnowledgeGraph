@@ -1,7 +1,7 @@
 import rdflib
 import pandas as pd
 
-def load_kg(path='src/data/output/kg.ttl'):
+def load_kg(path='./data/output/kg.ttl'):
     g = rdflib.Graph()
     g.parse(path, format='ttl')
     return g
