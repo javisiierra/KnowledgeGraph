@@ -1,89 +1,130 @@
-# Knowledge Graph Project — Advanced Data Analysis on Research Publications
+# Research Knowledge Graph Builder
 
-## Objetivo
+A pipeline for analyzing research publications and building Knowledge Graphs from PDFs.
 
-Este proyecto analiza un corpus de 30 artículos científicos con el objetivo de:
+## Overview
 
-- Extraer metadatos relevantes (título, autores, abstract, acknowledgements)
-- Realizar topic modeling usando BERTopic
-- Calcular similitudes semánticas entre abstracts con SentenceTransformers
-- Reconocer entidades nombradas en los acknowledgements (NER)
-- Construir un Knowledge Graph en formato RDF enriquecido con Wikidata y ROR
-- Visualizar los resultados mediante una aplicación interactiva en Streamlit
+This project extracts metadata from research papers, performs text analysis using AI models, and generates an interactive Knowledge Graph. Main features:
 
-## Estructura del Proyecto
+* PDF text extraction
+* Topic modeling with BERTopic
+* Semantic similarity analysis
+* Named Entity Recognition (NER)
+* Entity enrichment with Wikidata and ROR
+* RDF Knowledge Graph generation
+* Interactive visualization with Streamlit
+
+## Architecture
+
+PDFs → Text Extraction → Metadata Processing → AI Analysis → Entity Enrichment → Knowledge Graph → Visualization
+
+## Project Structure
 
 ```
-KnowledgeGraph-main/
+knowledge-graph-project/
 ├── data/
-│   └── papers/              # PDFs o XML de artículos
-├── src/                     # Scripts principales
-│   ├── preprocess.py        # Extracción de texto y metadatos
-│   ├── topic_model.py       # Topic modeling con BERTopic
-│   ├── similarity.py        # Similitud semántica de abstracts
-│   ├── ner_ack.py           # Reconocimiento de entidades en acknowledgements
-│   ├── wikidata_enrich.py   # Enriquecimiento con Wikidata
-│   ├── ror_enrich.py        # Enriquecimiento con ROR
-│   └── build_kg.py          # Construcción del Knowledge Graph en RDF
-├── streamlit_app/
-│   ├── app.py               # App principal en Streamlit
-│   └── kg_utils.py          # Funciones auxiliares para la app
-├── requirements.txt         # Dependencias del proyecto
+│   ├── papers/              # Input PDFs
+│   ├── processed/           # Extracted metadata
+│   └── output/              # Analysis results
+├── src/                     # Pipeline components
+│   ├── preprocess.py
+│   ├── topic_model.py
+│   ├── similarity.py
+│   ├── ner_ack.py
+│   ├── wikidata_enrich.py
+│   ├── ror_enrich.py
+│   ├── build_kg.py
+│   └── run_pipeline.py
+├── streamlit_app/           # Web interface
+│   ├── app.py
+│   └── kg_utils.py
+├── requirements.txt
 └── README.md
 ```
 
-## Entorno virtual
+## Installation
 
-Antes de instalar los requisitos, se recomienda crear y activar un entorno virtual:
+1. Clone repository:
 
 ```bash
-# Crear entorno virtual
-python -m venv venv
-
-# Activar en Windows
-venv\Scripts\activate
-
-# Activar en Linux/macOS
-source venv/bin/activate
+git clone https://github.com/javisiierra/KnowledgeGraph.git
+cd KnowledgeGraph
 ```
 
-## Instalación
+2. Create virtual environment:
 
-Con el entorno virtual activo, instala las dependencias con:
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+```
+
+3. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 ```
 
-## Ejecución
+## Usage
 
-1. Asegúrate de tener tus archivos PDF en la carpeta `data/papers/`
-2. Ejecuta los scripts en el siguiente orden:
+### Quick Start
+
+Place PDFs in `data/papers/` and run:
 
 ```bash
-python src/preprocess.py
-python src/topic_model.py
-python src/similarity.py
-python src/ner_ack.py
-python src/wikidata_enrich.py
-python src/ror_enrich.py
-python src/build_kg.py
+python src/run_pipeline.py
 ```
 
-3. Lanza la app de visualización:
+### Visualization
+
+After pipeline completion:
 
 ```bash
 streamlit run streamlit_app/app.py
 ```
 
-## Requisitos del sistema
+Access at: [http://localhost:8501](http://localhost:8501)
 
-- Python 3.10 o superior
-- Acceso a internet (para enriquecer con Wikidata y ROR)
-- pip actualizado
+### Manual Execution
 
-## Licencia
+Run individual components:
 
-Este proyecto está licenciado bajo los términos de la licencia MIT.
+```bash
+python src/preprocess.py       # Extract text
+python src/topic_model.py      # Topic modeling
+python src/similarity.py       # Similarity analysis
+python src/ner_ack.py          # NER
+python src/wikidata_enrich.py  # Wikidata enrichment
+python src/ror_enrich.py       # ROR enrichment
+python src/build_kg.py         # Build Knowledge Graph
+```
 
----
+## Input Requirements
+
+* PDFs in `data/papers/`
+* PDFs should contain: title, abstract, acknowledgements
+* Recommended: 10-30 papers
+
+## Output
+
+* Processed metadata: `data/processed/`
+* Analysis results: `data/output/`
+* Knowledge Graph: `data/output/kg.ttl`
+* Interactive visualization via Streamlit
+
+## Knowledge Graph Schema
+
+Uses vocabularies:
+
+* Dublin Core (dcterms)
+* FOAF
+* Custom vocabulary (ex:)
+
+Key relationships:
+
+* `paper → belongs_to_topic → topic`
+* `paper → similar_to → paper`
+* `paper → acknowledges → person/organization`
+
+## License
