@@ -27,7 +27,7 @@ def extract_section(text, start_marker, end_marker):
         return ""
 
 def preprocess_papers():
-    pdf_dir = "../data/papers"
+    pdf_dir = "./data/papers"
     for pdf_file in os.listdir(pdf_dir):
         if pdf_file.endswith(".pdf"):
             pdf_path = os.path.join(pdf_dir, pdf_file)

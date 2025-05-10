@@ -4,7 +4,7 @@ import os
 
 def load_acknowledgements():
     acks, ids = [], []
-    for file in os.listdir("data/processed"):
+    for file in os.listdir("./data/processed"):
         with open(f"data/processed/{file}") as f:
             data = json.load(f)
             acks.append(data['acknowledgements'])
@@ -20,8 +20,8 @@ def extract_entities():
         persons = list(set([ent.text for ent in doc.ents if ent.label_ == "PERSON"]))
         orgs = list(set([ent.text for ent in doc.ents if ent.label_ == "ORG"]))
         all_entities[paper_id] = {"persons": persons, "organizations": orgs}
-    os.makedirs("data/output", exist_ok=True)
-    with open("data/output/entities.json", "w") as f:
+    os.makedirs("./data/output", exist_ok=True)
+    with open("./data/output/entities.json", "w") as f:
         json.dump(all_entities, f, indent=2)
     print("Entity extraction completed and saved.")
 

@@ -55,7 +55,7 @@ def create_kg():
         g.add((p1, EX.similar_to, p2))
 
     # Serializar el grafo en formato Turtle en la ruta correcta
-    g.serialize(destination="src/data/output/kg.ttl", format="turtle")
+    g.serialize(destination="./data/output/kg.ttl", format="turtle")
     print("KG with external IDs saved.")
 
 if __name__ == "__main__":
