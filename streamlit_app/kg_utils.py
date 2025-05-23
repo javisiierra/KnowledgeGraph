@@ -1,99 +1,179 @@
 import rdflib
 import pandas as pd
+from urllib.parse import unquote
 
-def load_kg(path='./data/output/kg.ttl'):
-    """Load the knowledge graph from TTL file."""
+# Carga el grafo RDF desde disco
+def load_kg(path="./data/output/kg.ttl"):
     g = rdflib.Graph()
-    g.parse(path, format='ttl')
+    g.parse(path, format="turtle")
     return g
 
+# Obtiene todos los papers con sus tópicos asignados (para DataFrame)
 def get_papers_by_topic(g):
-    """Get all papers grouped by their topics."""
     query = """
     PREFIX ex: <http://example.org/>
     PREFIX dcterms: <http://purl.org/dc/terms/>
     
-    SELECT ?paper ?topic ?title WHERE {
+    SELECT ?paper ?title ?topic ?topic_id WHERE {
+      ?paper a ex:Paper ;
+             dcterms:title ?title .
+      OPTIONAL {
         ?paper ex:belongs_to_topic ?topic .
-        ?paper dcterms:title ?title .
+        ?topic dcterms:identifier ?topic_id .
+      }
     }
     """
-    results = g.query(query)
-    data = []
-    for r in results:
-        topic_id = str(r['topic']).split('_')[-1]
-        data.append({
-            'paper': str(r['paper']), 
-            'topic': f"Topic {topic_id}",
-            'title': str(r['title'])
-        })
-    return pd.DataFrame(data)
+    qres = g.query(query)
 
-def get_paper_details(g, paper_uri):
-    """Get detailed information about a specific paper."""
-    query = f"""
-    PREFIX dcterms: <http://purl.org/dc/terms/>
+    rows = []
+    for row in qres:
+        paper = str(row.paper)
+        title = str(row.title)
+        topic_uri = str(row.topic) if row.topic else None
+        topic_id = str(row.topic_id) if row.topic_id else None
+        
+        # Extraer nombre del tópico del URI si existe
+        topic_name = None
+        if topic_uri:
+            topic_name = topic_uri.split("topic_")[-1]
+        
+        rows.append({
+            "paper": paper,
+            "title": title,
+            "topic_uri": topic_uri,
+            "topic": topic_name,
+            "topic_id": topic_id
+        })
+    return pd.DataFrame(rows)
+
+# Obtiene todos los papers (título y URI) para listas desplegables
+def get_all_papers(g):
+    query = """
     PREFIX ex: <http://example.org/>
+    PREFIX dcterms: <http://purl.org/dc/terms/>
     
-    SELECT ?title ?abstract WHERE {{
-        <{paper_uri}> dcterms:title ?title ;
-                      dcterms:abstract ?abstract .
-    }}
+    SELECT ?paper ?title WHERE {
+      ?paper a ex:Paper ;
+             dcterms:title ?title .
+    }
     """
-    results = g.query(query)
-    for r in results:
+    qres = g.query(query)
+
+    papers = []
+    for row in qres:
+        papers.append({
+            "uri": str(row.paper),
+            "title": str(row.title)
+        })
+    return papers
+
+# Obtiene detalles de un paper dado su URI
+def get_paper_details(g, paper_uri):
+    query = """
+    PREFIX ex: <http://example.org/>
+    PREFIX dcterms: <http://purl.org/dc/terms/>
+    
+    SELECT ?title ?abstract WHERE {
+      BIND (<%s> AS ?paper)
+      ?paper dcterms:title ?title ;
+             dcterms:abstract ?abstract .
+    }
+    """ % paper_uri
+
+    qres = g.query(query)
+    for row in qres:
         return {
-            'title': str(r['title']),
-            'abstract': str(r['abstract'])
+            "title": str(row.title),
+            "abstract": str(row.abstract)
         }
     return None
 
+# Obtiene papers similares a uno dado (por URI)
 def get_similar_papers(g, paper_uri):
-    """Get papers similar to a given paper."""
-    query = f"""
+    query = """
     PREFIX ex: <http://example.org/>
-    PREFIX dcterms: <http://purl.org/dc/terms/>
     
-    SELECT ?similar ?title WHERE {{
-        <{paper_uri}> ex:similar_to ?similar .
-        ?similar dcterms:title ?title .
-    }}
-    """
-    results = g.query(query)
-    return [{'uri': str(r['similar']), 'title': str(r['title'])} for r in results]
+    SELECT ?similar ?title WHERE {
+      BIND (<%s> AS ?paper)
+      ?paper ex:similar_to ?similar .
+      ?similar <http://purl.org/dc/terms/title> ?title .
+    }
+    """ % paper_uri
 
+    qres = g.query(query)
+    similars = []
+    for row in qres:
+        similars.append({
+            "uri": str(row.similar),
+            "title": str(row.title)
+        })
+    return similars
+
+# Obtiene organizaciones reconocidas en todos los papers
 def get_organizations(g):
-    """Get all organizations mentioned in acknowledgements."""
     query = """
     PREFIX ex: <http://example.org/>
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     
     SELECT DISTINCT ?org ?name WHERE {
-        ?paper ex:acknowledges ?org .
-        OPTIONAL { ?org foaf:name ?name }
-        FILTER(regex(str(?org), "ror.org") || regex(str(?org), "wikidata"))
+      ?paper ex:acknowledges ?org .
+      ?org a foaf:Organization ;
+           foaf:name ?name .
     }
     """
-    results = g.query(query)
+    qres = g.query(query)
     orgs = []
-    for r in results:
-        org_info = {
-            'uri': str(r['org']),
-            'name': str(r['name']) if r['name'] else 'Unknown'
-        }
-        orgs.append(org_info)
+    for row in qres:
+        orgs.append({
+            "uri": str(row.org),
+            "name": str(row.name)
+        })
     return orgs
 
-def get_all_papers(g):
-    """Get all papers in the knowledge graph."""
+# --- FUNCIONES NUEVAS ---
+
+# Obtiene personas reconocidas en un paper dado su URI
+def get_people_by_paper(g, paper_uri):
     query = """
-    PREFIX dcterms: <http://purl.org/dc/terms/>
     PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     
-    SELECT ?paper ?title WHERE {
-        ?paper a ex:Paper ;
-               dcterms:title ?title .
+    SELECT DISTINCT ?person ?name WHERE {
+      BIND (<%s> AS ?paper)
+      ?paper ex:acknowledges ?person .
+      ?person a foaf:Person ;
+              foaf:name ?name .
     }
-    """
-    results = g.query(query)
-    return [{'uri': str(r['paper']), 'title': str(r['title'])} for r in results]
+    """ % paper_uri
+
+    qres = g.query(query)
+    people = []
+    for row in qres:
+        people.append({
+            "uri": str(row.person),
+            "name": str(row.name)
+        })
+    return people
+
+# Obtiene organizaciones reconocidas en un paper dado su URI
+def get_organizations_by_paper(g, paper_uri):
+    query = """
+    PREFIX ex: <http://example.org/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    
+    SELECT DISTINCT ?org ?name WHERE {
+      BIND (<%s> AS ?paper)
+      ?paper ex:acknowledges ?org .
+      ?org a foaf:Organization ;
+           foaf:name ?name .
+    }
+    """ % paper_uri
+
+    qres = g.query(query)
+    orgs = []
+    for row in qres:
+        orgs.append({
+            "uri": str(row.org),
+            "name": str(row.name)
+        })
+    return orgs

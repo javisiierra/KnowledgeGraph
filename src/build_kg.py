@@ -3,6 +3,28 @@ import json
 from urllib.parse import quote
 import os
 
+def add_person(g, EX, FOAF, WD, person):
+    if person.get("wikidata_id"):
+        person_uri = WD[person["wikidata_id"]]
+    else:
+        safe_name = quote(person["name"].replace(" ", "_"))
+        person_uri = EX[f"person_{safe_name}"]
+    g.add((person_uri, rdflib.RDF.type, FOAF.Person))
+    g.add((person_uri, FOAF.name, rdflib.Literal(person["name"])))
+    return person_uri
+
+def add_organization(g, EX, FOAF, WD, ROR, org):
+    if org.get("wikidata_id"):
+        org_uri = WD[org["wikidata_id"]]
+    elif org.get("ror_id"):
+        org_uri = ROR[org["ror_id"]]
+    else:
+        safe_name = quote(org["name"].replace(" ", "_"))
+        org_uri = EX[f"org_{safe_name}"]
+    g.add((org_uri, rdflib.RDF.type, FOAF.Organization))
+    g.add((org_uri, FOAF.name, rdflib.Literal(org["name"])))
+    return org_uri
+
 def create_kg():
     """Create RDF Knowledge Graph from processed data."""
     g = rdflib.Graph()
@@ -76,12 +98,10 @@ def create_kg():
         g.add((paper_uri, DCTERMS.abstract, rdflib.Literal(metadata['abstract'])))
         g.add((paper_uri, EX.identifier, rdflib.Literal(paper_id)))
         
-        # Authors
+        # Authors con URI persistente
         for author in metadata.get('authors', []):
-            author_node = rdflib.BNode()
-            g.add((author_node, rdflib.RDF.type, FOAF.Person))
-            g.add((author_node, FOAF.name, rdflib.Literal(author)))
-            g.add((paper_uri, DCTERMS.creator, author_node))
+            person_uri = add_person(g, EX, FOAF, WD, {"name": author})
+            g.add((paper_uri, DCTERMS.creator, person_uri))
         
         # Topic assignment
         if paper_id in topic_data:
@@ -90,32 +110,19 @@ def create_kg():
             g.add((topic_uri, rdflib.RDF.type, EX.Topic))
             g.add((topic_uri, DCTERMS.identifier, rdflib.Literal(str(topic_data[paper_id]))))
         
-        # Recognized entities (persons and organizations)
+        # Reconocimiento de entidades (personas y organizaciones)
         if paper_id in wd_data:
             for person in wd_data[paper_id].get("persons", []):
-                if person.get("wikidata_id"):
-                    person_uri = WD[person["wikidata_id"]]
-                else:
-                    person_uri = rdflib.BNode()
-                    g.add((person_uri, FOAF.name, rdflib.Literal(person["name"])))
+                person_uri = add_person(g, EX, FOAF, WD, person)
                 g.add((paper_uri, EX.acknowledges, person_uri))
             
             for org in wd_data[paper_id].get("organizations", []):
-                if org.get("wikidata_id"):
-                    org_uri = WD[org["wikidata_id"]]
-                else:
-                    org_uri = rdflib.BNode()
-                    g.add((org_uri, FOAF.name, rdflib.Literal(org["name"])))
+                org_uri = add_organization(g, EX, FOAF, WD, ROR, org)
                 g.add((paper_uri, EX.acknowledges, org_uri))
         
         if paper_id in ror_data:
             for org in ror_data[paper_id]:
-                if org.get("ror_id"):
-                    org_uri = ROR[org["ror_id"]]
-                    g.add((org_uri, FOAF.name, rdflib.Literal(org.get("ror_name", org["name"]))))
-                else:
-                    org_uri = rdflib.BNode()
-                    g.add((org_uri, FOAF.name, rdflib.Literal(org["name"])))
+                org_uri = add_organization(g, EX, FOAF, WD, ROR, org)
                 g.add((paper_uri, EX.acknowledges, org_uri))
     
     # Similarity relationships

@@ -35,6 +35,7 @@ knowledge-graph-project/
 │   ├── ror_enrich.py
 │   ├── build_kg.py
 │   └── run_pipeline.py
+|   └── kg_utils.py
 ├── streamlit_app/           # Web interface
 │   ├── app.py
 │   └── kg_utils.py

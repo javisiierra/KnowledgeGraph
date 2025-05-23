@@ -2,6 +2,13 @@ import streamlit as st
 import pandas as pd
 import kg_utils
 
+# Nuevas librerías para la visualización del grafo
+import networkx as nx
+from pyvis.network import Network
+import streamlit.components.v1 as components
+import tempfile
+import os
+
 st.set_page_config(layout="wide", page_title="Research Knowledge Graph Explorer")
 st.title("Research Knowledge Graph Explorer")
 
@@ -17,7 +24,13 @@ g = load_knowledge_graph()
 st.sidebar.header("Navigation")
 section = st.sidebar.selectbox(
     "Select Section",
-    ["Papers by Topic", "Paper Explorer", "Similar Papers", "Organizations"]
+    [
+        "Papers by Topic",
+        "Paper Explorer",
+        "Similar Papers",
+        "Organizations",
+        "Knowledge Graph Visualization"  # Nueva sección
+    ]
 )
 
 # Section 1: Papers by Topic
@@ -109,3 +122,101 @@ elif section == "Organizations":
             st.write(f"Wikidata organizations: {len(wd_orgs)}")
     else:
         st.warning("No organizations found in the knowledge graph.")
+
+elif section == "Knowledge Graph Visualization":
+    st.header("Knowledge Graph Visualization")
+    st.write("Visualización interactiva de tópicos conectados con artículos del grafo.")
+
+    # Obtener datos del grafo
+    df_topics = kg_utils.get_papers_by_topic(g)
+
+    if not df_topics.empty:
+        # Filtro opcional por tópico
+        unique_topics = df_topics['topic'].unique()
+        selected_topic = st.selectbox("Selecciona un tópico para enfocar", ["Todos"] + list(unique_topics))
+
+        if selected_topic != "Todos":
+            df_topics = df_topics[df_topics['topic'] == selected_topic]
+
+        G = nx.Graph()
+
+        for _, row in df_topics.iterrows():
+            topic = row['topic']
+            title = row['title']
+            paper_uri = row['paper']  # Añadido para obtener info extendida
+
+            # Añadir nodo del tópico (caja)
+            G.add_node(topic,
+                       label=topic,
+                       color='#ffcc00',
+                       shape='box',
+                       title=f'Tópico: {topic}',
+                       value=1)
+
+            # Obtener personas y organizaciones reconocidas para el paper
+            people = kg_utils.get_people_by_paper(g, paper_uri)
+            orgs = kg_utils.get_organizations_by_paper(g, paper_uri)
+
+            people_names = ", ".join([p['name'] for p in people]) if people else "Ninguna"
+            org_names = ", ".join([o['name'] for o in orgs]) if orgs else "Ninguna"
+
+            # Construir tooltip con saltos de línea (no HTML)
+            tooltip = (
+                f"Artículo: {title}\n"
+                f"Personas reconocidas: {people_names}\n"
+                f"Organizaciones reconocidas: {org_names}"
+            )
+
+            # Añadir nodo del artículo (óvalo) con tooltip enriquecido
+            G.add_node(title,
+                       label=title,
+                       color='#00ccff',
+                       shape='ellipse',
+                       title=tooltip,
+                       value=1)
+
+            G.add_edge(topic, title)
+
+        # Ajustar tamaño de nodos según grado
+        for node in G.nodes():
+            G.nodes[node]['value'] = G.degree[node] * 2
+
+        # Visualización con PyVis
+        net = Network(height="600px", width="100%", bgcolor="#ffffff", font_color="black", notebook=False)
+        net.from_nx(G)
+
+        # Mejorar física del grafo
+        net.set_options("""
+        const options = {
+          "nodes": {
+            "borderWidth": 2,
+            "size": 25,
+            "font": {"size": 14}
+          },
+          "edges": {
+            "color": {"inherit": true},
+            "smooth": false
+          },
+          "physics": {
+            "barnesHut": {
+              "gravitationalConstant": -8000,
+              "centralGravity": 0.3,
+              "springLength": 100,
+              "springConstant": 0.04,
+              "damping": 0.09
+            },
+            "minVelocity": 0.75
+          }
+        }
+        """)
+
+        # Exportar y mostrar en Streamlit
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.html') as tmp_file:
+            net.save_graph(tmp_file.name)
+            html_path = tmp_file.name
+
+        components.html(open(html_path, 'r', encoding='utf-8').read(), height=600)
+        os.unlink(html_path)
+
+    else:
+        st.warning("No hay datos de tópicos y artículos para visualizar.")
