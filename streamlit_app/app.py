@@ -127,11 +127,9 @@ elif section == "Knowledge Graph Visualization":
     st.header("Knowledge Graph Visualization")
     st.write("Visualización interactiva de tópicos conectados con artículos del grafo.")
 
-    # Obtener datos del grafo
     df_topics = kg_utils.get_papers_by_topic(g)
 
     if not df_topics.empty:
-        # Filtro opcional por tópico
         unique_topics = df_topics['topic'].unique()
         selected_topic = st.selectbox("Selecciona un tópico para enfocar", ["Todos"] + list(unique_topics))
 
@@ -140,83 +138,75 @@ elif section == "Knowledge Graph Visualization":
 
         G = nx.Graph()
 
-        for _, row in df_topics.iterrows():
+        for i, (_, row) in enumerate(df_topics.iterrows()):
             topic = row['topic']
             title = row['title']
-            paper_uri = row['paper']  # Añadido para obtener info extendida
+            paper_uri = row['paper']
+            short_title = f"Paper {i+1}"
 
-            # Añadir nodo del tópico (caja)
-            G.add_node(topic,
-                       label=topic,
-                       color='#ffcc00',
-                       shape='box',
-                       title=f'Tópico: {topic}',
-                       value=1)
+            G.add_node(topic, label=topic, color='#ffcc00', shape='box', title=f'Tópico: {topic}', value=3)
 
-            # Obtener personas y organizaciones reconocidas para el paper
             people = kg_utils.get_people_by_paper(g, paper_uri)
             orgs = kg_utils.get_organizations_by_paper(g, paper_uri)
 
             people_names = ", ".join([p['name'] for p in people]) if people else "Ninguna"
             org_names = ", ".join([o['name'] for o in orgs]) if orgs else "Ninguna"
 
-            # Construir tooltip con saltos de línea (no HTML)
             tooltip = (
-                f"Artículo: {title}\n"
-                f"Personas reconocidas: {people_names}\n"
-                f"Organizaciones reconocidas: {org_names}"
+                f"Título: {title}\n"
+                f"Personas: {people_names}\n"
+                f"Organizaciones: {org_names}"
             )
 
-            # Añadir nodo del artículo (óvalo) con tooltip enriquecido
-            G.add_node(title,
-                       label=title,
-                       color='#00ccff',
-                       shape='ellipse',
-                       title=tooltip,
-                       value=1)
+            G.add_node(short_title, label=short_title, color='#00ccff', shape='ellipse', title=tooltip, value=2)
+            G.add_edge(topic, short_title)
 
-            G.add_edge(topic, title)
+            for person in people:
+                G.add_node(person['name'], label=person['name'], color='#66ff66', shape='dot', title='Persona reconocida', value=1)
+                G.add_edge(short_title, person['name'])
 
-        # Ajustar tamaño de nodos según grado
+            for org in orgs:
+                G.add_node(org['name'], label=org['name'], color='#cc99ff', shape='dot', title='Organización reconocida', value=1)
+                G.add_edge(short_title, org['name'])
+
         for node in G.nodes():
-            G.nodes[node]['value'] = G.degree[node] * 2
+            G.nodes[node]['value'] = max(G.degree[node], 1) * 2
 
-        # Visualización con PyVis
-        net = Network(height="600px", width="100%", bgcolor="#ffffff", font_color="black", notebook=False)
+        net = Network(height="650px", width="100%", bgcolor="#ffffff", font_color="black", notebook=False)
         net.from_nx(G)
 
-        # Mejorar física del grafo
         net.set_options("""
         const options = {
+          "layout": {
+            "improvedLayout": true
+          },
           "nodes": {
-            "borderWidth": 2,
-            "size": 25,
-            "font": {"size": 14}
+            "borderWidth": 1,
+            "font": {"size": 13}
           },
           "edges": {
             "color": {"inherit": true},
-            "smooth": false
+            "smooth": true
           },
           "physics": {
-            "barnesHut": {
-              "gravitationalConstant": -8000,
-              "centralGravity": 0.3,
-              "springLength": 100,
-              "springConstant": 0.04,
-              "damping": 0.09
+            "forceAtlas2Based": {
+              "gravitationalConstant": -50,
+              "centralGravity": 0.005,
+              "springLength": 150,
+              "springConstant": 0.18
             },
-            "minVelocity": 0.75
+            "minVelocity": 0.75,
+            "solver": "forceAtlas2Based",
+            "timestep": 0.35
           }
         }
         """)
 
-        # Exportar y mostrar en Streamlit
         with tempfile.NamedTemporaryFile(delete=False, suffix='.html') as tmp_file:
             net.save_graph(tmp_file.name)
             html_path = tmp_file.name
 
-        components.html(open(html_path, 'r', encoding='utf-8').read(), height=600)
+        components.html(open(html_path, 'r', encoding='utf-8').read(), height=650)
         os.unlink(html_path)
-
     else:
         st.warning("No hay datos de tópicos y artículos para visualizar.")

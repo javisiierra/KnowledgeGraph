@@ -19,7 +19,6 @@ def extract_title(text):
 
 def extract_authors(text):
     """Extract authors from text - basic heuristic approach."""
-    # In a real scenario, you should use Grobid for better extraction
     authors = []
     lines = text.split('\n')[:20]  # Search in first 20 lines
     
