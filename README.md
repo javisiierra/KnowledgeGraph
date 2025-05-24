@@ -27,78 +27,77 @@ knowledge-graph-project/
 │   ├── processed/           # Extracted metadata
 │   └── output/              # Analysis results
 ├── src/                     # Pipeline components
-│   ├── preprocess.py
-│   ├── topic_model.py
-│   ├── similarity.py
-│   ├── ner_ack.py
-│   ├── wikidata_enrich.py
-│   ├── ror_enrich.py
-│   ├── build_kg.py
-│   └── run_pipeline.py
-|   └── kg_utils.py
 ├── streamlit_app/           # Web interface
-│   ├── app.py
-│   └── kg_utils.py
 ├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
 └── README.md
 ```
 
-## Installation
+## Installation and Usage
 
-1. Clone repository:
+### 🐳 Docker (Recommended)
 
+**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+
+1. **Clone and prepare:**
 ```bash
 git clone https://github.com/javisiierra/KnowledgeGraph.git
 cd KnowledgeGraph
+mkdir -p data/papers data/processed data/output
+# Place your PDF files in data/papers/
 ```
 
-2. Create virtual environment:
-
+2. **Run pipeline:**
 ```bash
+docker compose up --build pipeline
+```
+
+3. **Launch dashboard:**
+```bash
+docker compose up -d streamlit
+# Access at http://localhost:8501
+```
+
+**Management:**
+```bash
+docker compose down              # Stop services
+docker compose logs streamlit    # View logs
+```
+
+### 💻 Manual Installation
+
+1. **Setup environment:**
+```bash
+git clone https://github.com/javisiierra/KnowledgeGraph.git
+cd KnowledgeGraph
+
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 ```
 
-3. Install dependencies:
-
+2. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-## Usage
+3. **Prepare data:**
+```bash
+mkdir -p data/papers data/processed data/output
+# Place your PDF files in data/papers/
+```
 
-### Quick Start
-
-Place PDFs in `data/papers/` and run:
-
+4. **Run pipeline:**
 ```bash
 python src/run_pipeline.py
 ```
 
-### Visualization
-
-After pipeline completion:
-
+5. **Launch visualization:**
 ```bash
 streamlit run streamlit_app/app.py
-```
-
-Access at: [http://localhost:8501](http://localhost:8501)
-
-### Manual Execution
-
-Run individual components:
-
-```bash
-python src/preprocess.py       # Extract text
-python src/topic_model.py      # Topic modeling
-python src/similarity.py       # Similarity analysis
-python src/ner_ack.py          # NER
-python src/wikidata_enrich.py  # Wikidata enrichment
-python src/ror_enrich.py       # ROR enrichment
-python src/build_kg.py         # Build Knowledge Graph
+# Access at http://localhost:8501
 ```
 
 ## Input Requirements
@@ -117,15 +116,15 @@ python src/build_kg.py         # Build Knowledge Graph
 ## Knowledge Graph Schema
 
 Uses vocabularies:
-
 * Dublin Core (dcterms)
 * FOAF
 * Custom vocabulary (ex:)
 
 Key relationships:
-
 * `paper → belongs_to_topic → topic`
-* `paper → similar_to → paper`
+* `paper → similar_to → paper`  
 * `paper → acknowledges → person/organization`
 
 ## License
+
+Apache 2.0 License
