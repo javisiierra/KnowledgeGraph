@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Main pipeline service
+  pipeline:
+    build:
+      context: .
+      target: app
+    container_name: kg-pipeline
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./streamlit_app:/app/streamlit_app
+    working_dir: /app
+    command: python src/run_pipeline.py
+    restart: on-failure
+
+  # Streamlit visualization service
+  streamlit:
+    build:
+      context: .
+      target: streamlit
+    container_name: kg-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+    volumes:
+      - ./data:/app/data
+      - ./streamlit_app:/app/streamlit_app
+      - ./src:/app/src
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      - pipeline
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Named volumes for persistent data
+volumes:
+  kg_data:
+    driver: local
+  kg_output:
+    driver: local
+
+# Network for service communication
+networks:
+  default:
+    name: kg-network
+    driver: bridge

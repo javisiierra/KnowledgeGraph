@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Research Knowledge Graph Builder"
+version: "1.0.0"
+date-released: "2025-05-28"
+url: "https://github.com/javisiierra/KnowledgeGraph"
+
+authors:
+  - given-names: "Sergio"
+    family-names: "García Mansilla"
+    affiliation: "Universidad Politécnica de Madrid"
+    github: "sergarsilla"
+  - given-names: "Javier"
+    family-names: "Sierra Martínez"
+    affiliation: "Universidad Politécnica de Madrid"
+    github: "javisiierra"
+  - given-names: "Miguel"
+    family-names: "Díaz Martín"
+    affiliation: "Universidad Politécnica de Madrid"
+    github: ""
+  - given-names: "Javier" 
+    family-names: "González González"
+    affiliation: "Universidad Politécnica de Madrid"
+    github: ""
+
+license: "Apache-2.0"
+
+keywords:
+  - "knowledge graphs"
+  - "topic modeling"
+  - "named entity recognition"
+  - "research software engineering"
+  - "open science"
+  - "artificial intelligence"
+
+abstract: "AI pipeline for analyzing research publications and building Knowledge Graphs using topic modeling, NER, and entity enrichment."
