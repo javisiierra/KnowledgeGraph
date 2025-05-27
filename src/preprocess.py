@@ -4,7 +4,7 @@ import requests
 from lxml import etree
 from pdfminer.high_level import extract_text
 
-GROBID_URL = "http://localhost:8070/api/processFulltextDocument"
+GROBID_URL = os.environ.get("GROBID_URL", "http://localhost:8070/api/processFulltextDocument")
 
 def extract_text_from_pdf(pdf_path):
     """Extract full text from PDF (used for acknowledgements)."""

@@ -1,29 +1,14 @@
-version: '3.8'
-
 services:
-  # GROBID service for PDF metadata extraction
-  grobid:
-    image: lfoppiano/grobid:0.8.0
-    container_name: kg-grobid
-    ports:
-      - "8070:8070"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8070/api/isalive"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # Main pipeline service
   pipeline:
     build:
       context: .
       target: app
     container_name: kg-pipeline
+    network_mode: "host"
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
-      - GROBID_URL=http://grobid:8070/api/processFulltextDocument
+      - GROBID_URL=http://localhost:8070/api/processFulltextDocument
     volumes:
       - ./data:/app/data
       - ./src:/app/src
@@ -31,9 +16,6 @@ services:
     working_dir: /app
     command: python src/run_pipeline.py
     restart: on-failure
-    depends_on:
-      grobid:
-        condition: service_healthy
 
   # Streamlit visualization service
   streamlit:
@@ -41,8 +23,7 @@ services:
       context: .
       target: streamlit
     container_name: kg-streamlit
-    ports:
-      - "8501:8501"
+    network_mode: "host"
     environment:
       - PYTHONPATH=/app
       - STREAMLIT_SERVER_HEADLESS=true
@@ -56,21 +37,3 @@ services:
     restart: unless-stopped
     depends_on:
       - pipeline
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-# Named volumes for persistent data
-volumes:
-  kg_data:
-    driver: local
-  kg_output:
-    driver: local
-
-# Network for service communication
-networks:
-  default:
-    name: kg-network
-    driver: bridge
