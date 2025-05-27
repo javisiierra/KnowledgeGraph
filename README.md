@@ -36,7 +36,7 @@ knowledge-graph-project/
 
 ## Installation and Usage
 
-### 🐳 Docker (Recommended)
+### Docker (Recommended)
 
 **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
@@ -72,7 +72,7 @@ docker compose logs streamlit    # View logs
 
 ---
 
-### 💻 Manual Installation
+### Manual Installation
 
 1. **Setup environment:**
 ```bash
