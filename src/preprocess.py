@@ -3,16 +3,15 @@ import json
 import requests
 from lxml import etree
 from pdfminer.high_level import extract_text
-import re
 
 GROBID_URL = "http://localhost:8070/api/processFulltextDocument"
 
 def extract_text_from_pdf(pdf_path):
-    """Extract full text from PDF for fallback extraction (acknowledgements)."""
+    """Extract full text from PDF (used for acknowledgements)."""
     return extract_text(pdf_path)
 
 def grobid_parse_pdf(pdf_path):
-    """Send PDF to GROBID and get XML."""
+    """Send PDF to GROBID and get TEI XML."""
     with open(pdf_path, 'rb') as f:
         response = requests.post(GROBID_URL, files={'input': f})
         if response.status_code != 200:
@@ -21,7 +20,7 @@ def grobid_parse_pdf(pdf_path):
         return response.text
 
 def extract_from_grobid_xml(xml_text):
-    """Parse XML response from GROBID to extract title, authors, abstract."""
+    """Parse XML from GROBID to get title, authors, abstract."""
     root = etree.fromstring(xml_text.encode('utf-8'))
     ns = {'tei': 'http://www.tei-c.org/ns/1.0'}
 
@@ -47,38 +46,18 @@ def extract_from_grobid_xml(xml_text):
     return title, authors, abstract
 
 def extract_section(text, start_markers, end_markers):
-    """Extract a section from raw PDF text between start and end markers."""
-    lines = text.split('\n')
-    lower_lines = [line.lower().strip() for line in lines]
-
-    # Find start marker
-    start_idx = -1
-    for i, line in enumerate(lower_lines):
-        for marker in start_markers:
-            if re.fullmatch(rf'\b{re.escape(marker)}\b', line):
-                start_idx = i
-                break
-        if start_idx != -1:
-            break
-
-    if start_idx == -1:
-        return ""
-
-    # Collect lines until end marker
-    extracted_lines = []
-    for i in range(start_idx + 1, len(lines)):
-        if any(end in lower_lines[i] for end in end_markers):
-            break
-        if len(lines[i].strip()) == 0:
-            continue
-        extracted_lines.append(lines[i].strip())
-        if len(extracted_lines) >= 10:
-            break
-
-    extracted = ' '.join(extracted_lines).strip()
-    if len(extracted.split()) < 5 or len(extracted.split()) > 300:
-        return ""
-    return extracted
+    """Extract a section between start and end markers from full text."""
+    lower_text = text.lower()
+    
+    for start_marker in start_markers:
+        for end_marker in end_markers:
+            try:
+                start = lower_text.index(start_marker.lower())
+                end = lower_text.index(end_marker.lower(), start)
+                return text[start:end].strip()
+            except ValueError:
+                continue
+    return ""
 
 def save_metadata(paper_id, title, authors, abstract, acknowledgements):
     """Save extracted metadata to JSON."""
@@ -94,13 +73,13 @@ def save_metadata(paper_id, title, authors, abstract, acknowledgements):
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
 def preprocess_papers():
-    """Process all PDFs in data/papers/ using GROBID and PDFMiner."""
+    """Process PDFs using Grobid (for metadata) and PDFMiner (for acknowledgements)."""
     pdf_dir = "./data/papers"
     for pdf_file in os.listdir(pdf_dir):
         if pdf_file.endswith(".pdf"):
             pdf_path = os.path.join(pdf_dir, pdf_file)
             print(f"📄 Procesando: {pdf_file}")
-            
+
             xml = grobid_parse_pdf(pdf_path)
             if not xml:
                 print(f"[!] Falló GROBID para: {pdf_file}")
@@ -108,12 +87,12 @@ def preprocess_papers():
 
             title, authors, abstract = extract_from_grobid_xml(xml)
 
-            # Para acknowledgements usamos el texto completo extraído
+            # Extraer acknowledgements desde texto plano completo
             text = extract_text_from_pdf(pdf_path)
             acknowledgements = extract_section(
                 text,
-                ["acknowledgements", "acknowledgment"],
-                ["references", "bibliography", "appendix"]
+                ["acknowledgements", "acknowledgment", "acknowledgments", "acknowledgement"],
+                ["references", "bibliography", "appendix", "citations"]
             )
 
             paper_id = pdf_file.replace(".pdf", "")
