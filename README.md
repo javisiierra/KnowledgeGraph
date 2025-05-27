@@ -40,6 +40,11 @@ knowledge-graph-project/
 
 **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
+#### GROBID Integration
+
+GROBID (for PDF metadata extraction) is included as a service in `docker-compose.yml`.  
+You do not need to run it manually—Docker Compose will launch it automatically.
+
 1. **Clone and prepare:**
 ```bash
 git clone https://github.com/javisiierra/KnowledgeGraph.git
@@ -48,7 +53,7 @@ mkdir -p data/papers data/processed data/output
 # Place your PDF files in data/papers/
 ```
 
-2. **Run pipeline:**
+2. **Run pipeline (GROBID will start automatically):**
 ```bash
 docker compose up --build pipeline
 ```
@@ -64,6 +69,8 @@ docker compose up -d streamlit
 docker compose down              # Stop services
 docker compose logs streamlit    # View logs
 ```
+
+---
 
 ### 💻 Manual Installation
 
@@ -89,12 +96,20 @@ mkdir -p data/papers data/processed data/output
 # Place your PDF files in data/papers/
 ```
 
-4. **Run pipeline:**
+4. **Start GROBID manually (required for PDF metadata extraction):**
+
+- **With Docker:**
+    ```bash
+    docker run --rm -p 8070:8070 lfoppiano/grobid:0.8.0
+    ```
+- Or see the [official GROBID documentation](https://github.com/kermitt2/grobid) for other installation options.
+
+5. **Run pipeline:**
 ```bash
 python src/run_pipeline.py
 ```
 
-5. **Launch visualization:**
+6. **Launch visualization:**
 ```bash
 streamlit run streamlit_app/app.py
 # Access at http://localhost:8501
