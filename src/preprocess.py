@@ -1,40 +1,54 @@
 import os
 import json
+import requests
+from lxml import etree
 from pdfminer.high_level import extract_text
-import re
+
+GROBID_URL = os.environ.get("GROBID_URL", "http://localhost:8070/api/processFulltextDocument")
 
 def extract_text_from_pdf(pdf_path):
-    """Extract text content from PDF file."""
-    text = extract_text(pdf_path)
-    return text
+    """Extract full text from PDF (used for acknowledgements)."""
+    return extract_text(pdf_path)
 
-def extract_title(text):
-    """Extract title from the first few lines of the document."""
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    if lines:
-        # Assume title is in the first significant lines
-        title = " ".join(lines[:3])  # Take first 3 lines
-        return title[:200]  # Limit to 200 characters
-    return "Unknown Title"
+def grobid_parse_pdf(pdf_path):
+    """Send PDF to GROBID and get TEI XML."""
+    with open(pdf_path, 'rb') as f:
+        response = requests.post(GROBID_URL, files={'input': f})
+        if response.status_code != 200:
+            print(f"[!] Error con GROBID: {response.status_code}")
+            return None
+        return response.text
 
-def extract_authors(text):
-    """Extract authors from text - basic heuristic approach."""
+def extract_from_grobid_xml(xml_text):
+    """Parse XML from GROBID to get title, authors, abstract."""
+    root = etree.fromstring(xml_text.encode('utf-8'))
+    ns = {'tei': 'http://www.tei-c.org/ns/1.0'}
+
+    # Title
+    title_el = root.find('.//tei:titleStmt/tei:title', namespaces=ns)
+    title = title_el.text.strip() if title_el is not None and title_el.text else "Unknown Title"
+
+    # Authors
     authors = []
-    lines = text.split('\n')[:20]  # Search in first 20 lines
-    
-    # Look for common author name patterns
-    for line in lines:
-        # Look for lines with names (Initial + Surname pattern)
-        if re.match(r'^[A-Z][a-z]+ [A-Z][a-z]+', line):
-            authors.append(line.strip())
-    
-    return authors[:10]  # Limit to 10 authors maximum
+    for author in root.findall('.//tei:author', namespaces=ns):
+        forename_el = author.find('.//tei:forename', namespaces=ns)
+        surname_el = author.find('.//tei:surname', namespaces=ns)
+        forename = forename_el.text.strip() if forename_el is not None and forename_el.text else ""
+        surname = surname_el.text.strip() if surname_el is not None and surname_el.text else ""
+        full_name = f"{forename} {surname}".strip()
+        if full_name:
+            authors.append(full_name)
+
+    # Abstract
+    abstract_el = root.find('.//tei:abstract//tei:p', namespaces=ns)
+    abstract = abstract_el.text.strip() if abstract_el is not None and abstract_el.text else ""
+
+    return title, authors, abstract
 
 def extract_section(text, start_markers, end_markers):
-    """Extract a section between start and end markers."""
+    """Extract a section between start and end markers from full text."""
     lower_text = text.lower()
     
-    # Try multiple markers
     for start_marker in start_markers:
         for end_marker in end_markers:
             try:
@@ -46,7 +60,7 @@ def extract_section(text, start_markers, end_markers):
     return ""
 
 def save_metadata(paper_id, title, authors, abstract, acknowledgements):
-    """Save extracted metadata to JSON file."""
+    """Save extracted metadata to JSON."""
     metadata = {
         'id': paper_id,
         'title': title,
@@ -55,38 +69,34 @@ def save_metadata(paper_id, title, authors, abstract, acknowledgements):
         'acknowledgements': acknowledgements
     }
     os.makedirs("data/processed", exist_ok=True)
-    with open(f"data/processed/{paper_id}.json", "w") as f:
+    with open(f"data/processed/{paper_id}.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
 def preprocess_papers():
-    """Process all PDFs in the data/papers directory."""
+    """Process PDFs using Grobid (for metadata) and PDFMiner (for acknowledgements)."""
     pdf_dir = "./data/papers"
-    
     for pdf_file in os.listdir(pdf_dir):
         if pdf_file.endswith(".pdf"):
             pdf_path = os.path.join(pdf_dir, pdf_file)
+            print(f"📄 Procesando: {pdf_file}")
+
+            xml = grobid_parse_pdf(pdf_path)
+            if not xml:
+                print(f"[!] Falló GROBID para: {pdf_file}")
+                continue
+
+            title, authors, abstract = extract_from_grobid_xml(xml)
+
             text = extract_text_from_pdf(pdf_path)
-            
-            # Extract metadata
-            title = extract_title(text)
-            authors = extract_authors(text)
-            
-            # Extract sections with multiple possible markers
-            abstract = extract_section(
-                text, 
-                ["abstract", "summary", "resumen"], 
-                ["introduction", "1. introduction", "keywords", "1 introduction"]
-            )
-            
             acknowledgements = extract_section(
-                text, 
-                ["acknowledgements", "acknowledgments", "acknowledgement", "acknowledgment"],
+                text,
+                ["acknowledgements", "acknowledgment", "acknowledgments", "acknowledgement"],
                 ["references", "bibliography", "appendix", "citations"]
             )
-            
+
             paper_id = pdf_file.replace(".pdf", "")
             save_metadata(paper_id, title, authors, abstract, acknowledgements)
-            print(f"Processed: {paper_id}")
+            print(f"✅ Guardado: {paper_id}\n")
 
 if __name__ == "__main__":
     preprocess_papers()

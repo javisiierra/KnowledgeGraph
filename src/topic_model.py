@@ -13,7 +13,7 @@ def load_abstracts():
 
 def run_topic_model():
     ids, abstracts = load_abstracts()
-    topic_model = BERTopic()
+    topic_model = BERTopic(min_topic_size=2)
     topics, _ = topic_model.fit_transform(abstracts)
     os.makedirs("data/output", exist_ok=True)
     topic_model.save("data/output/bertopic_model")

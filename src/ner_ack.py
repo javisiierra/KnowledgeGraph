@@ -25,7 +25,7 @@ def detokenize(text):
     return new_text
 
 def extract_entities():
-    # Usamos un modelo de NER desde Hugging Face
+    # We use a NER model from Hugging Face
     ner = pipeline("ner", model="dslim/bert-base-NER", grouped_entities=True)
 
     ids, acks = load_acknowledgements()
