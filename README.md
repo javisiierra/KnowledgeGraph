@@ -40,6 +40,8 @@ knowledge-graph-project/
 
 **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
+Due to GROBID networking requirements, we need to start GROBID separately first:
+
 1. **Clone and prepare:**
 ```bash
 git clone https://github.com/javisiierra/KnowledgeGraph.git
@@ -48,22 +50,31 @@ mkdir -p data/papers data/processed data/output
 # Place your PDF files in data/papers/
 ```
 
-2. **Run pipeline:**
+1. **STEP 1: Start GROBID first (in separate terminal):**
+```bash
+docker run --rm -p 8070:8070 lfoppiano/grobid:0.8.0
+# Wait until you see GROBID fully loaded (models loaded)
+# Keep this terminal open
+```
+
+1. **STEP 2: Run pipeline (in another terminal):**
 ```bash
 docker compose up --build pipeline
 ```
 
-3. **Launch dashboard:**
+1. **STEP 3: Launch dashboard:**
 ```bash
-docker compose up -d streamlit
+docker compose up streamlit
 # Access at http://localhost:8501
 ```
 
 **Management:**
 ```bash
 docker compose down              # Stop services
-docker compose logs streamlit    # View logs
+# Stop GROBID manually with Ctrl+C in its terminal
 ```
+
+---
 
 ### Manual Installation
 
@@ -89,12 +100,20 @@ mkdir -p data/papers data/processed data/output
 # Place your PDF files in data/papers/
 ```
 
-4. **Run pipeline:**
+4. **Start GROBID manually (required for PDF metadata extraction):**
+
+- **With Docker:**
+    ```bash
+    docker run --rm -p 8070:8070 lfoppiano/grobid:0.8.0
+    ```
+- Or see the [official GROBID documentation](https://github.com/kermitt2/grobid) for other installation options.
+
+5. **Run pipeline:**
 ```bash
 python src/run_pipeline.py
 ```
 
-5. **Launch visualization:**
+6. **Launch visualization:**
 ```bash
 streamlit run streamlit_app/app.py
 # Access at http://localhost:8501

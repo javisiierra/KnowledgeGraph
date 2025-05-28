@@ -125,13 +125,13 @@ elif section == "Organizations":
 
 elif section == "Knowledge Graph Visualization":
     st.header("Knowledge Graph Visualization")
-    st.write("Visualización interactiva de tópicos conectados con artículos del grafo.")
+    st.write("Visualización interactiva de temas conectados con artículos del grafo.")
 
     df_topics = kg_utils.get_papers_by_topic(g)
 
     if not df_topics.empty:
         unique_topics = df_topics['topic'].unique()
-        selected_topic = st.selectbox("Selecciona un tópico para enfocar", ["Todos"] + list(unique_topics))
+        selected_topic = st.selectbox("Selecciona un tema para enfocar", ["Todos"] + list(unique_topics))
 
         if selected_topic != "Todos":
             df_topics = df_topics[df_topics['topic'] == selected_topic]
@@ -144,7 +144,7 @@ elif section == "Knowledge Graph Visualization":
             paper_uri = row['paper']
             short_title = f"Paper {i+1}"
 
-            G.add_node(topic, label=topic, color='#ffcc00', shape='box', title=f'Tópico: {topic}', value=3)
+            G.add_node(topic, label=topic, color='#ffcc00', shape='box', title=f'Tema: {topic}', value=3)
 
             people = kg_utils.get_people_by_paper(g, paper_uri)
             orgs = kg_utils.get_organizations_by_paper(g, paper_uri)
@@ -209,4 +209,4 @@ elif section == "Knowledge Graph Visualization":
         components.html(open(html_path, 'r', encoding='utf-8').read(), height=650)
         os.unlink(html_path)
     else:
-        st.warning("No hay datos de tópicos y artículos para visualizar.")
+        st.warning("No hay datos de temas y artículos para visualizar.")

@@ -98,7 +98,7 @@ def create_kg():
         g.add((paper_uri, DCTERMS.abstract, rdflib.Literal(metadata['abstract'])))
         g.add((paper_uri, EX.identifier, rdflib.Literal(paper_id)))
         
-        # Authors con URI persistente
+        # Authors with persistent URI
         for author in metadata.get('authors', []):
             person_uri = add_person(g, EX, FOAF, WD, {"name": author})
             g.add((paper_uri, DCTERMS.creator, person_uri))
@@ -110,7 +110,7 @@ def create_kg():
             g.add((topic_uri, rdflib.RDF.type, EX.Topic))
             g.add((topic_uri, DCTERMS.identifier, rdflib.Literal(str(topic_data[paper_id]))))
         
-        # Reconocimiento de entidades (personas y organizaciones)
+        # Entities from Wikidata and ROR
         if paper_id in wd_data:
             for person in wd_data[paper_id].get("persons", []):
                 person_uri = add_person(g, EX, FOAF, WD, person)
