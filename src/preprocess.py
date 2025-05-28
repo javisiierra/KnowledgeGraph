@@ -87,7 +87,6 @@ def preprocess_papers():
 
             title, authors, abstract = extract_from_grobid_xml(xml)
 
-            # Extraer acknowledgements desde texto plano completo
             text = extract_text_from_pdf(pdf_path)
             acknowledgements = extract_section(
                 text,

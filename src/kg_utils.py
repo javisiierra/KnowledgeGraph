@@ -2,13 +2,13 @@ import rdflib
 import pandas as pd
 from urllib.parse import unquote
 
-# Carga el grafo RDF desde disco
+# Loads the RDF graph from disk
 def load_kg(path="./data/output/kg.ttl"):
     g = rdflib.Graph()
     g.parse(path, format="turtle")
     return g
 
-# Obtiene todos los papers con sus tópicos asignados (para DataFrame)
+# Gets all papers with their assigned topics (for DataFrame)
 def get_papers_by_topic(g):
     query = """
     PREFIX ex: <http://example.org/>
@@ -32,7 +32,7 @@ def get_papers_by_topic(g):
         topic_uri = str(row.topic) if row.topic else None
         topic_id = str(row.topic_id) if row.topic_id else None
         
-        # Extraer nombre del tópico del URI si existe
+        # Extract topic name from URI if exists
         topic_name = None
         if topic_uri:
             topic_name = topic_uri.split("topic_")[-1]
@@ -46,7 +46,7 @@ def get_papers_by_topic(g):
         })
     return pd.DataFrame(rows)
 
-# Obtiene todos los papers (título y URI) para listas desplegables
+# Gets all papers (title and URI) for dropdown lists
 def get_all_papers(g):
     query = """
     PREFIX ex: <http://example.org/>
@@ -67,7 +67,7 @@ def get_all_papers(g):
         })
     return papers
 
-# Obtiene detalles de un paper dado su URI
+# Gets details of a paper given its URI
 def get_paper_details(g, paper_uri):
     query = """
     PREFIX ex: <http://example.org/>
@@ -88,7 +88,7 @@ def get_paper_details(g, paper_uri):
         }
     return None
 
-# Obtiene papers similares a uno dado (por URI)
+# Gets papers similar to a given one (by URI)
 def get_similar_papers(g, paper_uri):
     query = """
     PREFIX ex: <http://example.org/>
@@ -109,7 +109,7 @@ def get_similar_papers(g, paper_uri):
         })
     return similars
 
-# Obtiene organizaciones reconocidas en todos los papers
+# Gets organizations recognized in all papers
 def get_organizations(g):
     query = """
     PREFIX ex: <http://example.org/>
@@ -130,9 +130,7 @@ def get_organizations(g):
         })
     return orgs
 
-# --- FUNCIONES NUEVAS ---
-
-# Obtiene personas reconocidas en un paper dado su URI
+# Gets people recognized in a paper given its URI
 def get_people_by_paper(g, paper_uri):
     query = """
     PREFIX ex: <http://example.org/>
@@ -155,7 +153,7 @@ def get_people_by_paper(g, paper_uri):
         })
     return people
 
-# Obtiene organizaciones reconocidas en un paper dado su URI
+# Gets organizations recognized in a paper given its URI
 def get_organizations_by_paper(g, paper_uri):
     query = """
     PREFIX ex: <http://example.org/>
